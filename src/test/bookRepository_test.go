@@ -207,7 +207,63 @@ func TestUpdateWithInvalidData(t *testing.T) {
 	response = httptest.NewRecorder()
 	a.Router.ServeHTTP(response, req)
 
-	checkResponseCode(t, http.StatusNotModified, response.Code)
+	checkResponseCode(t, http.StatusBadRequest, response.Code)
+}
+
+func TestUpdateWithMissedField(t *testing.T) {
+	clearTable()
+	addUser()
+	req, _ := http.NewRequest("GET", "/api/books/1", nil)
+	response := httptest.NewRecorder()
+	a.Router.ServeHTTP(response, req)
+	var originalBook map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &originalBook)
+
+	payload := []byte(`{
+		"name": "Some new name",
+		"price": 10,
+		"genre": 2 }`)
+	req, err := http.NewRequest("PUT", "/api/books/1", bytes.NewBuffer(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response = httptest.NewRecorder()
+	a.Router.ServeHTTP(response, req)
+
+	checkResponseCode(t, http.StatusBadRequest, response.Code)
+}
+
+func TestCreateWithInvalidData(t *testing.T) {
+	clearTable()
+	addUser()
+	payload := []byte(`{
+		"name": "Some new name",
+		"price": -1,
+		"genre": 2,
+		"amount": -10 }`)
+	req, err := http.NewRequest("PUT", "/api/books/1", bytes.NewBuffer(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	a.Router.ServeHTTP(response, req)
+	checkResponseCode(t, http.StatusBadRequest, response.Code)
+}
+
+func TestCreateWithMissedField(t *testing.T) {
+	clearTable()
+	addUser()
+	payload := []byte(`{
+		"name": "Some new name",
+		"genre": 2,
+		"amount": 10 }`)
+	req, err := http.NewRequest("PUT", "/api/books/1", bytes.NewBuffer(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	a.Router.ServeHTTP(response, req)
+	checkResponseCode(t, http.StatusBadRequest, response.Code)
 }
 
 func TestCreate(t *testing.T) {
