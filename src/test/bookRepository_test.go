@@ -69,6 +69,18 @@ func TestFindNonExistentId(t *testing.T) {
 	}
 }
 
+func TestFindInvalidId(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/api/books/1fff", nil)
+	response := httptest.NewRecorder()
+	a.Router.ServeHTTP(response, req)
+	checkResponseCode(t, http.StatusBadRequest, response.Code)
+	var m map[string]string
+	json.Unmarshal(response.Body.Bytes(), &m)
+	if m["error"] != "Invalid book Id" {
+		t.Errorf("Expected the 'error' key of the response to be set to 'Invalid book Id'. Got '%s'", m["error"])
+	}
+}
+
 func TestFindByName(t *testing.T) {
 	req, err := http.NewRequest("GET", "/api/books/name/book1", nil)
 	if err != nil {
@@ -123,6 +135,19 @@ func TestFilterByPrices(t *testing.T) {
 	}
 }
 
+func TestFilterByOnlyOnePrice(t *testing.T) {
+	req, err := http.NewRequest("GET", "/api/books/price/10/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	a.Router.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+}
+
 func TestUpdate(t *testing.T) {
 	clearTable()
 	addUser()
@@ -159,6 +184,30 @@ func TestUpdate(t *testing.T) {
 	if m["amount"] == originalBook["amount"] {
 		t.Errorf("Expected the amount to change from '%v' to '%v'. Got '%v'", originalBook["amount"], m["amount"], m["amount"])
 	}
+}
+
+func TestUpdateWithInvalidData(t *testing.T) {
+	clearTable()
+	addUser()
+	req, _ := http.NewRequest("GET", "/api/books/1", nil)
+	response := httptest.NewRecorder()
+	a.Router.ServeHTTP(response, req)
+	var originalBook map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &originalBook)
+
+	payload := []byte(`{
+		"name": "Some new name",
+		"price": -1,
+		"genre": 2,
+		"amount": -10 }`)
+	req, err := http.NewRequest("PUT", "/api/books/1", bytes.NewBuffer(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response = httptest.NewRecorder()
+	a.Router.ServeHTTP(response, req)
+
+	checkResponseCode(t, http.StatusNotModified, response.Code)
 }
 
 func TestCreate(t *testing.T) {

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
 
 	"github.com/DmitriyZhevnov/library/src/entities"
 )
@@ -52,34 +51,25 @@ func buildBooks(rows *sql.Rows, er error) (book []entities.Book, err error) {
 }
 
 func Create(db *sql.DB, book *entities.Book) error {
-	if len(book.Name) > 100 || book.Price < 0 || book.Amount < 0 {
-		err := errors.New("Entered data not valid")
+	result, err := db.Exec("insert into book(name, price, genre_id, amount) values (?, ?, ?, ?)",
+		book.Name, book.Price, book.GenreId, book.Amount)
+	if err != nil {
 		return err
 	} else {
-		result, err := db.Exec("insert into book(name, price, genre_id, amount) values (?, ?, ?, ?)",
-			book.Name, book.Price, book.GenreId, book.Amount)
-		if err != nil {
-			return err
-		} else {
-			id, _ := result.LastInsertId()
-			book.Id = int(id)
-			return nil
-		}
+		id, _ := result.LastInsertId()
+		book.Id = int(id)
+		return nil
 	}
+
 }
 
 func Update(db *sql.DB, id int64, book *entities.Book) (int64, error) {
-	if len(book.Name) > 100 || book.Price < 0 || book.Amount < 0 {
-		err := errors.New("Entered data not valid")
+	result, err := db.Exec("update book set name = ?, price = ?, genre_id = ?, amount = ? where id = ?",
+		book.Name, book.Price, book.GenreId, book.Amount, id)
+	if err != nil {
 		return 0, err
 	} else {
-		result, err := db.Exec("update book set name = ?, price = ?, genre_id = ?, amount = ? where id = ?",
-			book.Name, book.Price, book.GenreId, book.Amount, id)
-		if err != nil {
-			return 0, err
-		} else {
-			return result.RowsAffected()
-		}
+		return result.RowsAffected()
 	}
 }
 

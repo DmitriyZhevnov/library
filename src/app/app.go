@@ -12,6 +12,7 @@ import (
 	repository "github.com/DmitriyZhevnov/library/src/repository"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 type App struct {
@@ -69,7 +70,7 @@ func (a *App) Run(addr string) {
 
 func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/api/books", a.FindAll).Methods("GET")
-	a.Router.HandleFunc("/api/books/{id:[0-9]+}", a.FindById).Methods("GET")
+	a.Router.HandleFunc("/api/books/{id}", a.FindById).Methods("GET")
 	a.Router.HandleFunc("/api/books/name/{name}", a.FindByName).Methods("GET")
 	a.Router.HandleFunc("/api/books/genre/{id:[0-9]+}", a.FilterByGenre).Methods("GET")
 	a.Router.HandleFunc("/api/books/price/{minPrice:[0-9]+}/{maxPrice:[0-9]+}", a.FilterByPrices).Methods("GET")
@@ -172,8 +173,14 @@ func (a *App) FilterByPrices(w http.ResponseWriter, r *http.Request) {
 func (a *App) Create(w http.ResponseWriter, r *http.Request) {
 	var book entities.Book
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&book); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+	err := decoder.Decode(&book)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
+		return
+	}
+	err = validateStruct(book)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
 		return
 	}
 	defer r.Body.Close()
@@ -198,10 +205,15 @@ func (a *App) Update(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
 		return
 	}
+	err = validateStruct(book)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
+		return
+	}
 	defer r.Body.Close()
 	book.Id = id
 	if _, err := repository.Update(a.DB, int64(id), &book); err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithError(w, http.StatusNotModified, err.Error())
 		return
 	}
 	respondWithJSON(w, http.StatusOK, book)
@@ -230,4 +242,13 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(response)
+}
+
+func validateStruct(b entities.Book) error {
+	validate := validator.New()
+	err := validate.Struct(b)
+	if err != nil {
+		return err
+	}
+	return nil
 }
