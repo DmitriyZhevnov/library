@@ -16,7 +16,7 @@ var a app.App
 
 func TestMain(m *testing.M) {
 	a = app.App{}
-	a.Initialize("root", "950621", "library")
+	a.Initialize("postgres", "root", "root", "5432", "fullstack-postgres", "fullstack_api")
 	code := m.Run()
 	os.Exit(code)
 }

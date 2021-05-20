@@ -10,8 +10,8 @@ import (
 
 	"github.com/DmitriyZhevnov/library/src/entities"
 	repository "github.com/DmitriyZhevnov/library/src/repository"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"gopkg.in/go-playground/validator.v9"
 )
 
@@ -20,48 +20,20 @@ type App struct {
 	DB     *sql.DB
 }
 
-func (a *App) initDb() {
-	db := a.DB
-	db.Query(`DROP TABLE IF EXISTS book;`)
-	db.Query(`DROP TABLE IF EXISTS genre;`)
-	db.Query(`CREATE TABLE genre (
-			id INT NOT NULL AUTO_INCREMENT,
-			name VARCHAR(45) NOT NULL,
-			PRIMARY KEY (id));`)
-	db.Query(`INSERT INTO library.genre (name) VALUES ('Adventure');`)
-	db.Query(`INSERT INTO library.genre (name) VALUES ('Classics');`)
-	db.Query(`INSERT INTO library.genre (name) VALUES ('Fantasy');`)
-	db.Query(`CREATE TABLE book (
-			id INT NOT NULL AUTO_INCREMENT,
-			name VARCHAR(100) NOT NULL,
-			price DOUBLE NOT NULL,
-			genre_id INT NOT NULL,
-			amount INT NOT NULL,
-			PRIMARY KEY (id),
-			UNIQUE INDEX name_UNIQUE (name ASC) VISIBLE,
-			INDEX j_idx (genre_id ASC) VISIBLE,
-			CONSTRAINT fk_book_genre
-			  FOREIGN KEY (genre_id)
-			  REFERENCES library.genre (id)
-			  ON DELETE NO ACTION
-			  ON UPDATE NO ACTION);`)
-	db.Query(`INSERT INTO library.book (name, price, genre_id, amount) VALUES ('book1', '10', '1', '50');`)
-	db.Query(`INSERT INTO library.book (name, price, genre_id, amount) VALUES ('book2', '11', '2', '1');`)
-	db.Query(`INSERT INTO library.book (name, price, genre_id, amount) VALUES ('book3', '20.6', '3', '3');`)
-	db.Query(`INSERT INTO library.book (name, price, genre_id, amount) VALUES ('book4', '25', '1', '4');`)
-	db.Query(`INSERT INTO library.book (name, price, genre_id, amount) VALUES ('book5', '30.5', '2', '2');`)
-}
-
-func (a *App) Initialize(user, password, dbname string) {
-	connectionString := fmt.Sprintf("%s:%s@/%s", user, password, dbname)
+func (a *App) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) {
+	DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable ",
+		DbHost, DbPort, DbUser, DbName, DbPassword)
 	var err error
-	a.DB, err = sql.Open("mysql", connectionString)
+	a.DB, err = sql.Open(Dbdriver, DBURL)
+	fmt.Println(a.DB)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Cannot connect to %s database", Dbdriver)
+		log.Fatal("This is the error:", err)
+	} else {
+		fmt.Printf("We are connected to the %s database", Dbdriver)
 	}
 	a.Router = mux.NewRouter()
 	a.initializeRoutes()
-	a.initDb()
 }
 
 func (a *App) Run(addr string) {

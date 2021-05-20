@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/DmitriyZhevnov/library/src/entities"
 )
@@ -12,22 +13,26 @@ func FindAll(db *sql.DB) (book []entities.Book, err error) {
 }
 
 func FindById(db *sql.DB, id int) (book []entities.Book, err error) {
-	rows, err := db.Query("select * from book where id = ?", id)
+	sqlRequest := fmt.Sprintf("select * from book where id = '%d'", id)
+	rows, err := db.Query(sqlRequest)
 	return buildBooks(rows, err)
 }
 
 func FindByName(db *sql.DB, name string) (book []entities.Book, err error) {
-	rows, err := db.Query("select * from book where name = ?", name)
+	sqlRequest := fmt.Sprintf("select * from book where name = '%s'", name)
+	rows, err := db.Query(sqlRequest)
 	return buildBooks(rows, err)
 }
 
 func FilterByGenre(db *sql.DB, id int) (book []entities.Book, err error) {
-	rows, err := db.Query("select * from book where genre_id = ?", id)
+	sqlRequest := fmt.Sprintf("select * from book where genre_id = '%d'", id)
+	rows, err := db.Query(sqlRequest)
 	return buildBooks(rows, err)
 }
 
 func FilterByPrices(db *sql.DB, min, max float64) (book []entities.Book, err error) {
-	rows, err := db.Query("select * from book where price >= ? AND price <= ?", min, max)
+	sqlRequest := fmt.Sprintf("select * from book where price >= '%f' AND price <= '%f'", min, max)
+	rows, err := db.Query(sqlRequest)
 	return buildBooks(rows, err)
 }
 
@@ -51,8 +56,9 @@ func buildBooks(rows *sql.Rows, er error) (book []entities.Book, err error) {
 }
 
 func Create(db *sql.DB, book *entities.Book) error {
-	result, err := db.Exec("insert into book(name, price, genre_id, amount) values (?, ?, ?, ?)",
+	sqlRequest := fmt.Sprintf("insert into book(name, price, genre_id, amount) values ('%s', '%f', '%d', '%d')",
 		book.Name, book.Price, book.GenreId, book.Amount)
+	result, err := db.Exec(sqlRequest)
 	if err != nil {
 		return err
 	} else {
@@ -64,8 +70,9 @@ func Create(db *sql.DB, book *entities.Book) error {
 }
 
 func Update(db *sql.DB, id int64, book *entities.Book) (int64, error) {
-	result, err := db.Exec("update book set name = ?, price = ?, genre_id = ?, amount = ? where id = ?",
+	sqlRequest := fmt.Sprintf("update book set name = '%s', price = '%f', genre_id = '%d', amount = '%d' where id = '%d'",
 		book.Name, book.Price, book.GenreId, book.Amount, id)
+	result, err := db.Exec(sqlRequest)
 	if err != nil {
 		return 0, err
 	} else {
@@ -74,7 +81,8 @@ func Update(db *sql.DB, id int64, book *entities.Book) (int64, error) {
 }
 
 func Delete(db *sql.DB, id int64) (int64, error) {
-	result, err := db.Exec("delete from book where id = ?", id)
+	sqlRequest := fmt.Sprintf("delete from book where id = '%d'", id)
+	result, err := db.Exec(sqlRequest)
 	if err != nil {
 		return 0, err
 	} else {
