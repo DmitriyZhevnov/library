@@ -46,6 +46,7 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/api/books/name/{name}", a.FindByName).Methods("GET")
 	a.Router.HandleFunc("/api/books/genre/{id:[0-9]+}", a.FilterByGenre).Methods("GET")
 	a.Router.HandleFunc("/api/books/price/{minPrice:[0-9]+}/{maxPrice:[0-9]+}", a.FilterByPrices).Methods("GET")
+	a.Router.HandleFunc("/api/books/price/{minPrice:[0-9]+}", a.FilterByPricesWithOneParameter).Methods("GET")
 	a.Router.HandleFunc("/api/books", a.Create).Methods("POST")
 	a.Router.HandleFunc("/api/books/{id:[0-9]+}", a.Update).Methods("PUT")
 	a.Router.HandleFunc("/api/books/{id:[0-9]+}", a.Delete).Methods("DELETE")
@@ -129,6 +130,10 @@ func (a *App) FilterByGenre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondWithJSON(w, http.StatusOK, book)
+}
+
+func (a *App) FilterByPricesWithOneParameter(w http.ResponseWriter, r *http.Request) {
+	respondWithError(w, http.StatusBadRequest, "Please, enter the second parameter")
 }
 
 func (a *App) FilterByPrices(w http.ResponseWriter, r *http.Request) {
