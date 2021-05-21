@@ -3,6 +3,7 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -10,13 +11,17 @@ import (
 	"testing"
 
 	"github.com/DmitriyZhevnov/library/src/app"
+	"github.com/joho/godotenv"
 )
 
 var a app.App
 
 func TestMain(m *testing.M) {
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
 	a = app.App{}
-	a.Initialize("postgres", "root", "root", "5432", "fullstack-postgres", "fullstack_api")
+	a.Initialize(os.Getenv("DB_DRIVER"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_PORT"), os.Getenv("DB_HOST"), os.Getenv("DB_NAME"))
 	code := m.Run()
 	os.Exit(code)
 }
