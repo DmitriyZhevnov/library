@@ -166,18 +166,13 @@ func (a *App) Create(w http.ResponseWriter, r *http.Request) {
 	var book entities.Book
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&book)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
-		return
-	}
-	err = validateStruct(book)
-	if err != nil {
+	if err != nil || validateStruct(book) != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
 		return
 	}
 	defer r.Body.Close()
-
-	if err := repository.Create(a.DB, &book); err != nil {
+	err = repository.Create(a.DB, &book)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -193,19 +188,20 @@ func (a *App) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	var book entities.Book
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&book); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
-		return
-	}
-	err = validateStruct(book)
-	if err != nil {
+	err = decoder.Decode(&book)
+	if err != nil || validateStruct(book) != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
 		return
 	}
 	defer r.Body.Close()
 	book.Id = id
-	if _, err := repository.Update(a.DB, int64(id), &book); err != nil {
+	var rowsAffected int64
+	if rowsAffected, err = repository.Update(a.DB, int64(id), &book); err != nil {
 		respondWithError(w, http.StatusNotModified, err.Error())
+		return
+	}
+	if rowsAffected == 0 {
+		respondWithError(w, http.StatusNotFound, "There is no book with this id")
 		return
 	}
 	respondWithJSON(w, http.StatusOK, book)
@@ -218,11 +214,16 @@ func (a *App) Delete(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Invalid Book Id")
 		return
 	}
-	if _, err := repository.Delete(a.DB, int64(id)); err != nil {
+	var rowsAffected int64
+	if rowsAffected, err = repository.Delete(a.DB, int64(id)); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJSON(w, http.StatusNoContent, map[string]string{"result": "success"})
+	if rowsAffected == 0 {
+		respondWithError(w, http.StatusNotFound, "There is no book with this id")
+		return
+	}
+	respondWithJSON(w, http.StatusNoContent, map[string]string{"result": "Successfully deleted"})
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

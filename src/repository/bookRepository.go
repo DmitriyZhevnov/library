@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/DmitriyZhevnov/library/src/entities"
+	_ "github.com/lib/pq"
 )
 
 func FindAll(db *sql.DB) (book []entities.Book, err error) {
@@ -56,17 +57,14 @@ func buildBooks(rows *sql.Rows, er error) (book []entities.Book, err error) {
 }
 
 func Create(db *sql.DB, book *entities.Book) error {
-	sqlRequest := fmt.Sprintf("insert into book(name, price, genre_id, amount) values ('%s', '%f', '%d', '%d')",
-		book.Name, book.Price, book.GenreId, book.Amount)
-	result, err := db.Exec(sqlRequest)
+	id := 0
+	err := db.QueryRow("insert into book(name, price, genre_id, amount) values ($1, $2, $3, $4) RETURNING book.id", book.Name, book.Price, book.GenreId, book.Amount).Scan(&id)
 	if err != nil {
 		return err
 	} else {
-		id, _ := result.LastInsertId()
-		book.Id = int(id)
+		book.Id = id
 		return nil
 	}
-
 }
 
 func Update(db *sql.DB, id int64, book *entities.Book) (int64, error) {
