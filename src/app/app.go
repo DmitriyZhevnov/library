@@ -181,7 +181,7 @@ func (a *App) Create(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJSON(w, http.StatusNoContent, book.Id)
+	respondWithJSON(w, http.StatusCreated, book.Id)
 }
 
 func (a *App) Update(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +222,7 @@ func (a *App) Delete(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+	respondWithJSON(w, http.StatusNoContent, map[string]string{"result": "success"})
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

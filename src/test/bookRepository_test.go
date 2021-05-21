@@ -141,13 +141,13 @@ func TestFilterByPrices(t *testing.T) {
 }
 
 func TestFilterByOnlyOnePrice(t *testing.T) {
-	req, err := http.NewRequest("GET", "/api/books/price/10/", nil)
+	req, err := http.NewRequest("GET", "/api/books/price/10", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rr := httptest.NewRecorder()
 	a.Router.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusNotFound {
+	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
@@ -281,7 +281,7 @@ func TestCreate(t *testing.T) {
 	response := httptest.NewRecorder()
 	a.Router.ServeHTTP(response, req)
 
-	checkResponseCode(t, http.StatusNoContent, response.Code)
+	checkResponseCode(t, http.StatusCreated, response.Code)
 	var m map[string]interface{}
 	json.Unmarshal(response.Body.Bytes(), &m)
 	var i = response.Body
@@ -302,7 +302,7 @@ func TestDelete(t *testing.T) {
 	req, _ = http.NewRequest("DELETE", "/api/books/1", nil)
 	response = httptest.NewRecorder()
 	a.Router.ServeHTTP(response, req)
-	checkResponseCode(t, http.StatusOK, response.Code)
+	checkResponseCode(t, http.StatusNoContent, response.Code)
 
 	req, _ = http.NewRequest("GET", "/api/books/1", nil)
 	response = httptest.NewRecorder()
