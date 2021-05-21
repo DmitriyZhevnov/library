@@ -98,6 +98,11 @@ func (a *App) FindByName(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if book == nil {
+		var array [5]string
+		respondWithJSON(w, http.StatusOK, array)
+		return
+	}
 	respondWithJSON(w, http.StatusOK, book)
 }
 
@@ -116,6 +121,11 @@ func (a *App) FilterByGenre(w http.ResponseWriter, r *http.Request) {
 		default:
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 		}
+		return
+	}
+	if book == nil {
+		var array [5]string
+		respondWithJSON(w, http.StatusOK, array)
 		return
 	}
 	respondWithJSON(w, http.StatusOK, book)
@@ -137,6 +147,11 @@ func (a *App) FilterByPrices(w http.ResponseWriter, r *http.Request) {
 		default:
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 		}
+		return
+	}
+	if book == nil {
+		var array [5]string
+		respondWithJSON(w, http.StatusOK, array)
 		return
 	}
 	respondWithJSON(w, http.StatusOK, book)

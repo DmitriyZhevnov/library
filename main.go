@@ -4,9 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
-
 	"github.com/DmitriyZhevnov/library/src/app"
+	"github.com/joho/godotenv"
 )
 
 func init() {
