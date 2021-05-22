@@ -2,7 +2,9 @@ package test
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -11,37 +13,31 @@ import (
 	"testing"
 
 	"github.com/DmitriyZhevnov/library/src/app"
-	"github.com/joho/godotenv"
+	"github.com/DmitriyZhevnov/library/src/repository"
 )
 
 var a app.App
 
 func TestMain(m *testing.M) {
-	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
+	// a.Initialize("postgres", "root", "root", "5432", "postgres_test", "fullstack_api_test")
+	var err error
+	DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", "postgres_test", "5432", "root", "fullstack_api_test", "root")
+	a.DB, err = sql.Open("postgres", DBURL)
+	if err != nil {
+		fmt.Printf("Cannot connect to %s database\n", "postgres")
+		log.Fatal("This is the error:", err)
+	} else {
+		fmt.Printf("We are connected to the %s database\n", "postgres")
 	}
-	a = app.App{}
-	a.Initialize(os.Getenv("DB_DRIVER"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_PORT"), os.Getenv("DB_HOST"), os.Getenv("DB_NAME"))
-	code := m.Run()
-	os.Exit(code)
+	os.Exit(m.Run())
 }
 
 func TestFindAll(t *testing.T) {
-	req, err := http.NewRequest("GET", "/api/books", nil)
+	_, err := repository.FindAll(a.DB)
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("OK")
 	}
-	rr := httptest.NewRecorder()
-	a.Router.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-	expected := `[{"id":1,"name":"book1","price":10,"genre":1,"amount":50},{"id":2,"name":"book2","price":11,"genre":2,"amount":1},{"id":3,"name":"book3","price":20.6,"genre":3,"amount":3},{"id":4,"name":"book4","price":25,"genre":1,"amount":4},{"id":5,"name":"book5","price":30.5,"genre":2,"amount":2}]`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
-	}
+
 }
 
 func TestFindById(t *testing.T) {
@@ -115,11 +111,6 @@ func TestFindByGenre(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
-	expected := `[{"id":1,"name":"book1","price":10,"genre":1,"amount":50},{"id":4,"name":"book4","price":25,"genre":1,"amount":4}]`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
-	}
 }
 
 func TestFilterByPrices(t *testing.T) {
@@ -132,11 +123,6 @@ func TestFilterByPrices(t *testing.T) {
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
-	}
-	expected := `[{"id":1,"name":"book1","price":10,"genre":1,"amount":50},{"id":2,"name":"book2","price":11,"genre":2,"amount":1}]`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
 	}
 }
 
@@ -155,7 +141,7 @@ func TestFilterByOnlyOnePrice(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	clearTable()
-	addUser()
+	addBook()
 	req, _ := http.NewRequest("GET", "/api/books/1", nil)
 	response := httptest.NewRecorder()
 	a.Router.ServeHTTP(response, req)
@@ -193,7 +179,7 @@ func TestUpdate(t *testing.T) {
 
 func TestUpdateWithInvalidData(t *testing.T) {
 	clearTable()
-	addUser()
+	addBook()
 	req, _ := http.NewRequest("GET", "/api/books/1", nil)
 	response := httptest.NewRecorder()
 	a.Router.ServeHTTP(response, req)
@@ -217,7 +203,7 @@ func TestUpdateWithInvalidData(t *testing.T) {
 
 func TestUpdateWithMissedField(t *testing.T) {
 	clearTable()
-	addUser()
+	addBook()
 	req, _ := http.NewRequest("GET", "/api/books/1", nil)
 	response := httptest.NewRecorder()
 	a.Router.ServeHTTP(response, req)
@@ -240,7 +226,7 @@ func TestUpdateWithMissedField(t *testing.T) {
 
 func TestCreateWithInvalidData(t *testing.T) {
 	clearTable()
-	addUser()
+	addBook()
 	payload := []byte(`{
 		"name": "Some new name",
 		"price": -1,
@@ -257,7 +243,7 @@ func TestCreateWithInvalidData(t *testing.T) {
 
 func TestCreateWithMissedField(t *testing.T) {
 	clearTable()
-	addUser()
+	addBook()
 	payload := []byte(`{
 		"name": "Some new name",
 		"genre": 2,
@@ -293,7 +279,7 @@ func TestCreate(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	clearTable()
-	addUser()
+	addBook()
 	req, _ := http.NewRequest("GET", "/api/books/1", nil)
 	response := httptest.NewRecorder()
 	a.Router.ServeHTTP(response, req)
@@ -310,7 +296,7 @@ func TestDelete(t *testing.T) {
 	checkResponseCode(t, http.StatusNotFound, response.Code)
 }
 
-func addUser() {
+func addBook() {
 	a.DB.Exec(`INSERT INTO library.book (name, price, genre_id, amount) VALUES ('test_book', '25', '1', '30');`)
 }
 

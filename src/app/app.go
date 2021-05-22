@@ -25,7 +25,6 @@ func (a *App) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName st
 		DbHost, DbPort, DbUser, DbName, DbPassword)
 	var err error
 	a.DB, err = sql.Open(Dbdriver, DBURL)
-	fmt.Println(a.DB)
 	if err != nil {
 		fmt.Printf("Cannot connect to %s database", Dbdriver)
 		log.Fatal("This is the error:", err)
