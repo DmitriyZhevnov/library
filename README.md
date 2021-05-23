@@ -25,8 +25,7 @@ For get the book by Id enter the Get request:
 ============================================================
 If you enter in URL invalid Id, for example:
 	http://localhost:8080/api/books/2gd
-...you will see Error message :
-sdfsdfsf
+...you will see Error message 
 ============================================================
 
 For filter by price:
@@ -35,8 +34,7 @@ For filter by price:
 ============================================================
 If you enter in URL only one price parameter, for example:
 	http://localhost:8080/api/books/price/10
-...you will see Error message :
-sdfsdfsf
+...you will see Error message 
 
 ============================================================
 
