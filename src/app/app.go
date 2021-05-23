@@ -6,19 +6,23 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/DmitriyZhevnov/library/src/entities"
-	repository "github.com/DmitriyZhevnov/library/src/repository"
+	"github.com/DmitriyZhevnov/library/src/repository"
+	service "github.com/DmitriyZhevnov/library/src/service"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-	"gopkg.in/go-playground/validator.v9"
 )
 
 type App struct {
 	Router *mux.Router
 	DB     *sql.DB
 }
+
+var (
+	bookRepository repository.BookRepository = repository.NewPostgresBookRepository()
+	bookService    service.BookService       = service.NewBookService(bookRepository)
+)
 
 func (a *App) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) {
 	DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable ",
@@ -52,7 +56,7 @@ func (a *App) initializeRoutes() {
 }
 
 func (a *App) FindAll(w http.ResponseWriter, r *http.Request) {
-	books, err := repository.FindAll(a.DB)
+	books, err := bookService.FindAll(a.DB)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -62,23 +66,10 @@ func (a *App) FindAll(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) FindById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid book Id")
-		return
-	}
 	book := []entities.Book{}
-	if book, err = repository.FindById(a.DB, id); err != nil {
-		switch err {
-		case sql.ErrNoRows:
-			respondWithError(w, http.StatusNotFound, "Book not found")
-		default:
-			respondWithError(w, http.StatusInternalServerError, err.Error())
-		}
-		return
-	}
-	if book == nil {
-		respondWithError(w, http.StatusNotFound, "Book not found")
+	var err error
+	if book, err = bookService.FindById(a.DB, vars["id"]); err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	respondWithJSON(w, http.StatusOK, book)
@@ -86,16 +77,10 @@ func (a *App) FindById(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) FindByName(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	name := vars["name"]
 	book := []entities.Book{}
 	var err error
-	if book, err = repository.FindByName(a.DB, name); err != nil {
-		switch err {
-		case sql.ErrNoRows:
-			respondWithError(w, http.StatusNotFound, "Book not found")
-		default:
-			respondWithError(w, http.StatusInternalServerError, err.Error())
-		}
+	if book, err = bookService.FindByName(a.DB, vars["name"]); err != nil {
+		respondWithError(w, http.StatusNotFound, "Book not found")
 		return
 	}
 	if book == nil {
@@ -108,19 +93,10 @@ func (a *App) FindByName(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) FilterByGenre(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid book Id")
-		return
-	}
 	book := []entities.Book{}
-	if book, err = repository.FilterByGenre(a.DB, id); err != nil {
-		switch err {
-		case sql.ErrNoRows:
-			respondWithError(w, http.StatusNotFound, "Books not found")
-		default:
-			respondWithError(w, http.StatusInternalServerError, err.Error())
-		}
+	var err error
+	if book, err = bookService.FilterByGenre(a.DB, vars["id"]); err != nil {
+		respondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}
 	if book == nil {
@@ -137,20 +113,10 @@ func (a *App) FilterByPricesWithOneParameter(w http.ResponseWriter, r *http.Requ
 
 func (a *App) FilterByPrices(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	minPrice, err := strconv.ParseFloat(vars["minPrice"], 64)
-	maxPrice, err := strconv.ParseFloat(vars["maxPrice"], 64)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid prices")
-		return
-	}
 	book := []entities.Book{}
-	if book, err = repository.FilterByPrices(a.DB, minPrice, maxPrice); err != nil {
-		switch err {
-		case sql.ErrNoRows:
-			respondWithError(w, http.StatusNotFound, "Books not found")
-		default:
-			respondWithError(w, http.StatusInternalServerError, err.Error())
-		}
+	var err error
+	if book, err = bookService.FilterByPrices(a.DB, vars["minPrice"], vars["maxPrice"]); err != nil {
+		respondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}
 	if book == nil {
@@ -165,12 +131,12 @@ func (a *App) Create(w http.ResponseWriter, r *http.Request) {
 	var book entities.Book
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&book)
-	if err != nil || validateStruct(book) != nil {
+	if err != nil || bookService.Validate(&book) != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
 		return
 	}
 	defer r.Body.Close()
-	err = repository.Create(a.DB, &book)
+	err = bookService.Create(a.DB, &book)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -180,27 +146,16 @@ func (a *App) Create(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) Update(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid book Id")
-		return
-	}
 	var book entities.Book
 	decoder := json.NewDecoder(r.Body)
-	err = decoder.Decode(&book)
-	if err != nil || validateStruct(book) != nil {
+	err := decoder.Decode(&book)
+	if err != nil || bookService.Validate(&book) != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
 		return
 	}
 	defer r.Body.Close()
-	book.Id = id
-	var rowsAffected int64
-	if rowsAffected, err = repository.Update(a.DB, int64(id), &book); err != nil {
+	if err := bookService.Update(a.DB, vars["id"], &book); err != nil {
 		respondWithError(w, http.StatusNotModified, err.Error())
-		return
-	}
-	if rowsAffected == 0 {
-		respondWithError(w, http.StatusNotFound, "There is no book with this id")
 		return
 	}
 	respondWithJSON(w, http.StatusOK, book)
@@ -208,18 +163,8 @@ func (a *App) Update(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) Delete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid Book Id")
-		return
-	}
-	var rowsAffected int64
-	if rowsAffected, err = repository.Delete(a.DB, int64(id)); err != nil {
+	if _, err := bookService.Delete(a.DB, vars["id"]); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if rowsAffected == 0 {
-		respondWithError(w, http.StatusNotFound, "There is no book with this id")
 		return
 	}
 	respondWithJSON(w, http.StatusNoContent, map[string]string{"result": "Successfully deleted"})
@@ -234,13 +179,4 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(response)
-}
-
-func validateStruct(b entities.Book) error {
-	validate := validator.New()
-	err := validate.Struct(b)
-	if err != nil {
-		return err
-	}
-	return nil
 }
