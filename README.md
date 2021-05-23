@@ -23,15 +23,18 @@ For get the book by Id enter the Get request:
     http://localhost:8080/api/books/2
 
 ============================================================
+
 If you enter in URL invalid Id, for example:
 	http://localhost:8080/api/books/2gd
-...you will see Error message 
+... you will see Error message 
+
 ============================================================
 
 For filter by price:
     http://localhost:8080/api/books/price/10/20
 
 ============================================================
+
 If you enter in URL only one price parameter, for example:
 	http://localhost:8080/api/books/price/10
 ...you will see Error message 
