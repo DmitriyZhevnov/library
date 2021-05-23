@@ -23,7 +23,7 @@ func (*service) Validate(book *entities.Book) error {
 	validate := validator.New()
 	err := validate.Struct(book)
 	if err != nil {
-		return err
+		return errors.New("Invalid resquest payload")
 	}
 	return nil
 }
